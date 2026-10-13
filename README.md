@@ -12,8 +12,8 @@ library** (no modification of the native OpenFOAM sources).
 **The physics (equations) is classical kinetic theory of gases**, not our
 invention:
 
-- Chapman–Enskog for $\mu_k$ and $D_{jk}$: Hirschfelder, Curtiss & Bird (1954);
-- collision integrals $\Omega^{(1,1)*},\Omega^{(2,2)*}$ and their
+- Chapman–Enskog for μ<sub>k</sub> and D<sub>jk</sub>: Hirschfelder, Curtiss & Bird (1954);
+- collision integrals Ω<sup>(1,1)\*</sup>, Ω<sup>(2,2)\*</sup> and their
   approximations: Monchick & Mason (1961), Neufeld et al. (1972);
 - Wilke's rule for the mixture viscosity: Wilke (1950);
 - combination averaging of the thermal conductivity: Mathur, Tondon & Saxena
@@ -39,12 +39,12 @@ in a scientific work, please cite Wang et al. (2025) and Kee et al. (2003).
 From the six CHEMKIN molecular parameters (`geometry`, `welldepth`, `diameter`,
 `dipole`, `polar`, `relaxation`), the library computes:
 
-- pure-species $\mu_k$, $\kappa_k$, $D_{kk}$;
-- binary $D_{jk}$ (Chapman–Enskog, collision integrals
-  $\Omega^{(1,1)*}$, $\Omega^{(2,2)*}$ with the Stockmayer polar correction);
-- mixture viscosity $\mu$ — Wilke's rule;
-- mixture thermal conductivity $\kappa$ — combination averaging (Mathur et al.);
-- mixture-averaged $D_{k,mix} = (1-Y_k)/\sum_{j\ne k} X_j/D_{jk}$.
+- pure-species μ<sub>k</sub>, κ<sub>k</sub>, D<sub>kk</sub>;
+- binary D<sub>jk</sub> (Chapman–Enskog, collision integrals
+  Ω<sup>(1,1)\*</sup>, Ω<sup>(2,2)\*</sup> with the Stockmayer polar correction);
+- mixture viscosity μ — Wilke's rule;
+- mixture thermal conductivity κ — combination averaging (Mathur et al.);
+- mixture-averaged D<sub>k,mix</sub> = (1 − Y<sub>k</sub>) / Σ<sub>j≠k</sub> (X<sub>j</sub> / D<sub>jk</sub>).
 
 ## Layout
 
@@ -135,9 +135,9 @@ Cantera (gri30, mixture-averaged). Result:
 
 | quantity | T=300 K | T=1800 K |
 |---|---|---|
-| $\mu$ | 1.24% | 0.40% |
-| $\kappa$ | 1.28% | 0.22% |
-| $D_{k,mix}$ | 0.14–1.35% | 0.01–0.28% |
+| μ | 1.24% | 0.40% |
+| κ | 1.28% | 0.22% |
+| D<sub>k,mix</sub> | 0.14–1.35% | 0.01–0.28% |
 
 The `validation/` test case is a 2D counterflow flame (GRI 3.0, 53 species,
 325 reactions), run with `foamRun -libs ("libkineticTheoryTransport.so")`.
