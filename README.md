@@ -1,66 +1,66 @@
 # kineticTheoryTransport
 
-Библиотека OpenFOAM-v14, реализующая **mixture-averaged** транспортную модель на
-основе стандартной кинетической теории газов (Chapman–Enskog /
-Lennard–Jones + поправка Стокмайера) для реагирующих многокомпонентных
-течений.
+An OpenFOAM-v14 library implementing a **mixture-averaged** transport model
+based on the standard kinetic theory of gases (Chapman–Enskog /
+Lennard–Jones + Stockmayer correction) for reacting multicomponent flows.
 
-Порт форка `standardKinetic/of-11` на OpenFOAM-v14 в виде **отдельной
-библиотеки** (без правки нативных исходников OF).
+A port of the `standardKinetic/of-11` fork to OpenFOAM-v14 as a **standalone
+library** (no modification of the native OpenFOAM sources).
 
-## Атрибуция и лицензия
+## Attribution and license
 
-**Физика (формулы) — классика кинетической теории газов**, не наше изобретение:
+**The physics (equations) is classical kinetic theory of gases**, not our
+invention:
 
-- Chapman–Enskog для $\mu_k$ и $D_{jk}$: Hirschfelder, Curtiss & Bird (1954);
-- интегралы столкновений $\Omega^{(1,1)*},\Omega^{(2,2)*}$ и их аппроксимации:
-  Monchick & Mason (1961), Neufeld et al. (1972);
-- правило Вильке для вязкости смеси: Wilke (1950);
-- комбинационное усреднение теплопроводности: Mathur, Tondon & Saxena (1967);
-- сводное изложение всех формул: **Kee, Coltrin & Glarborg, "Chemically
-  Reacting Flow" (2003)**.
+- Chapman–Enskog for $\mu_k$ and $D_{jk}$: Hirschfelder, Curtiss & Bird (1954);
+- collision integrals $\Omega^{(1,1)*},\Omega^{(2,2)*}$ and their
+  approximations: Monchick & Mason (1961), Neufeld et al. (1972);
+- Wilke's rule for the mixture viscosity: Wilke (1950);
+- combination averaging of the thermal conductivity: Mathur, Tondon & Saxena
+  (1967);
+- a consolidated presentation of all the equations: **Kee, Coltrin & Glarborg,
+  "Chemically Reacting Flow" (2003)**.
 
-**Конкретная реализация (структура классов, числовые коэффициенты интегралов
-столкновений, поправка Стокмайера) является портом** GPL-форка
-`standardKinetic/of-11` из работы:
+**The concrete implementation (class structure, collision-integral
+coefficients, Stockmayer correction) is a port** of the GPL fork
+`standardKinetic/of-11` from:
 
 > Fei Wang, Liang An, Tat Leung Chan. *An OpenFOAM solver incorporating
 > detailed transport model for reacting flow simulations*, Computer Physics
 > Communications **309** (2025) 109472.
 > https://doi.org/10.1016/j.cpc.2024.109472
 
-Форк распространяется под **GPLv3** (полный текст в `LICENSE`). Настоящая
-библиотека — производная работа и также лицензируется под GPLv3. Если вы
-используете код в научной работе, пожалуйста, цитируйте Wang et al. (2025)
-и Kee et al. (2003).
+The fork is distributed under **GPLv3** (full text in `LICENSE`). This library
+is a derivative work and is likewise licensed under GPLv3. If you use the code
+in a scientific work, please cite Wang et al. (2025) and Kee et al. (2003).
 
-## Что считает
+## What it computes
 
-Из шести молекулярных параметров CHEMKIN (`geometry`, `welldepth`, `diameter`,
-`dipole`, `polar`, `relaxation`) вычисляются:
+From the six CHEMKIN molecular parameters (`geometry`, `welldepth`, `diameter`,
+`dipole`, `polar`, `relaxation`), the library computes:
 
-- чисто-видовые $\mu_k$, $\kappa_k$, $D_{kk}$;
-- бинарные $D_{jk}$ (Chapman–Enskog, интегралы столкновений
-  $\Omega^{(1,1)*}$, $\Omega^{(2,2)*}$ с полярной поправкой Стокмайера);
-- вязкость смеси $\mu$ — правило Вильке;
-- теплопроводность смеси $\kappa$ — комбинационное усреднение (Mathur et al.);
+- pure-species $\mu_k$, $\kappa_k$, $D_{kk}$;
+- binary $D_{jk}$ (Chapman–Enskog, collision integrals
+  $\Omega^{(1,1)*}$, $\Omega^{(2,2)*}$ with the Stockmayer polar correction);
+- mixture viscosity $\mu$ — Wilke's rule;
+- mixture thermal conductivity $\kappa$ — combination averaging (Mathur et al.);
 - mixture-averaged $D_{k,mix} = (1-Y_k)/\sum_{j\ne k} X_j/D_{jk}$.
 
-## Состав
+## Layout
 
 ```
 kineticTheoryTransport/
 ├── Make/{files,options}
 ├── specie/transport/standardKineticTransport/   # species transport
-├── mixtures/kineticTheoryMixture/               # runtime-интерфейс Djk
+├── mixtures/kineticTheoryMixture/               # runtime Djk interface
 ├── mixtures/kineticTheoryMulticomponentMixture/ # mixture (mu/kappa/Djk)
 ├── thermophysicalTransport/kineticTheoryFickianFourier/  # transport model
-├── thermos.C                    # инстанцирование psi/rho thermo
-├── thermophysicalTransport.C    # регистрация kineticTheoryFickianFourier
-└── validation/                  # тест-кейс + валидация против Cantera
+├── thermos.C                    # psi/rho thermo instantiation
+├── thermophysicalTransport.C    # kineticTheoryFickianFourier registration
+└── validation/                  # test case + validation against Cantera
 ```
 
-## Сборка
+## Building
 
 ```bash
 source /opt/openfoam14/etc/bashrc
@@ -68,10 +68,10 @@ cd kineticTheoryTransport
 ./Allwmake
 ```
 
-`Allwmake` собирает `libkineticTheoryTransport.so` и устанавливает
-user-level override шаблона `chemistryModel` (см. ниже).
+`Allwmake` builds `libkineticTheoryTransport.so` and installs the user-level
+override of the `chemistryModel` template (see below).
 
-## Использование в кейсе
+## Using in a case
 
 `constant/physicalProperties`:
 
@@ -90,8 +90,8 @@ thermoType
 }
 ```
 
-В `constant/thermo` у каждого вида вместо `transport { As ...; Ts ...; }`
-записываются кинетические параметры:
+In `constant/thermo`, each species carries the kinetic parameters instead of
+`transport { As ...; Ts ...; }`:
 
 ```cpp
 transport
@@ -114,30 +114,30 @@ laminar
 }
 ```
 
-## Важная деталь: chemistryModel через dynamicCode
+## Important detail: chemistryModel via dynamicCode
 
-В OF-v14 класс `chemistryModel` (стандартная stiff-ODE химия) шаблонизируется
-на thermoPhysics и компилируется **на лету** (dynamicCode). Чтобы эта
-динамическая компиляция нашла `standardKineticTransport.H`, `Allwmake`
-устанавливает user-level override шаблона в
+In OpenFOAM-v14 the `chemistryModel` class (standard stiff-ODE chemistry) is
+templated on the thermoPhysics and compiled **on the fly** (dynamicCode). So
+that this dynamic compilation can find `standardKineticTransport.H`,
+`Allwmake` installs a user-level template override at
 
 ```
 ~/.OpenFOAM/14/codeTemplates/dynamicCode/chemistryModel
 ```
 
-добавляющий `-I<lib>/lnInclude` в `EXE_INC`. При первом запуске кейса
-OpenFOAM один раз соберёт `standard<standardKinetic<...>>` и закеширует его.
+which adds `-I<lib>/lnInclude` to `EXE_INC`. On the first run of a case,
+OpenFOAM compiles `standard<standardKinetic<...>>` once and caches it.
 
-## Валидация
+## Validation
 
-`validation/validate_vs_cantera.py` сверяет формулы кинетической теории с
-Cantera (gri30, mixture-averaged). Результат:
+`validation/validate_vs_cantera.py` checks the kinetic-theory equations against
+Cantera (gri30, mixture-averaged). Result:
 
-| величина | T=300 K | T=1800 K |
+| quantity | T=300 K | T=1800 K |
 |---|---|---|
 | $\mu$ | 1.24% | 0.40% |
 | $\kappa$ | 1.28% | 0.22% |
 | $D_{k,mix}$ | 0.14–1.35% | 0.01–0.28% |
 
-Тест-кейс `validation/` — 2D counterflow flame (GRI 3.0, 53 вида,
-325 реакций), запускается `foamRun -libs ("libkineticTheoryTransport.so")`.
+The `validation/` test case is a 2D counterflow flame (GRI 3.0, 53 species,
+325 reactions), run with `foamRun -libs ("libkineticTheoryTransport.so")`.
