@@ -1,0 +1,19 @@
+# wmake build artifacts
+lnInclude/
+Make/linux*/
+Make/darwin*/
+Make/mingw*/
+
+# validation case: generated/transient artifacts
+validation/dynamicCode/
+validation/log.*
+validation/constant/polyMesh/
+validation/postProcessing/
+validation/VTK/
+validation/[1-9]*/
+validation/[1-9]*.[0-9]*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo

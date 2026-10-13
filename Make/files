@@ -1,0 +1,5 @@
+mixtures/kineticTheoryMixture/kineticTheoryMixture.C
+thermos.C
+thermophysicalTransport.C
+
+LIB = $(FOAM_USER_LIBBIN)/libkineticTheoryTransport
