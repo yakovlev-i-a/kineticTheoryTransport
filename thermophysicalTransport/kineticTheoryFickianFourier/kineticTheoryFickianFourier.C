@@ -54,50 +54,68 @@ updateDm() const
 
     const volScalarField Wm(this->thermo().W());
 
+    // sumXbyD 必须通过 volScalarField 运算累积（而非只改 primitiveFieldRef），
+    // 否则 boundaryField 保持 0，导致 Dm 在边界除以 small -> 巨大值 -> 矩阵病态。
+    volScalarField sumXbyD
+    (
+        volScalarField::New
+        (
+            "sumXbyD",
+            T.mesh(),
+            dimensionedScalar
+            (
+                dimless/dimKinematicViscosity/Wm.dimensions(),
+                0
+            )
+        )
+    );
+
     forAll(Dm_, i)
     {
-        volScalarField sumXbyD
-        (
-            volScalarField::New
-            (
-                "sumXbyD",
-                T.mesh(),
-                dimless/dimKinematicViscosity/Wm.dimensions()
-            )
-        );
+        sumXbyD = dimensionedScalar(sumXbyD.dimensions(), 0);
 
         forAll(Y, j)
         {
             if (j != i)
             {
-                const scalarField& pCells = p.primitiveField();
-                const scalarField& TCells = T.primitiveField();
-
-                tmp<scalarField> tDij
+                // Dij 构造为完整 volScalarField（internal + boundary）
+                volScalarField Dij
                 (
-                    new scalarField(pCells.size())
+                    volScalarField::New
+                    (
+                        "Dij",
+                        T.mesh(),
+                        dimensionedScalar(dimKinematicViscosity, 0)
+                    )
                 );
 
-                scalarField& Dij = tDij.ref();
-
-                forAll(pCells, celli)
+                forAll(T, celli)
                 {
                     Dij[celli] =
-                        mixture.Djk(i, j, pCells[celli], TCells[celli]);
+                        mixture.Djk(i, j, p[celli], T[celli]);
+                }
+                forAll(T.boundaryField(), patchi)
+                {
+                    scalarField& bf = Dij.boundaryFieldRef()[patchi];
+                    forAll(bf, facei)
+                    {
+                        bf[facei] = mixture.Djk
+                        (
+                            i, j,
+                            p.boundaryField()[patchi][facei],
+                            T.boundaryField()[patchi][facei]
+                        );
+                    }
                 }
 
-                sumXbyD.primitiveFieldRef() +=
-                    Y[j].primitiveField()
-                   /(
-                        this->thermo().Wi(j).value()*Dij
-                    );
+                sumXbyD += Y[j]/(this->thermo().Wi(j)*Dij);
             }
         }
 
         Dm_.set
         (
             i,
-            (1/Wm - Y[i]/this->thermo().Wi(i))
+            (1 - Y[i])/Wm
            /max(sumXbyD, dimensionedScalar(sumXbyD.dimensions(), small))
         );
     }

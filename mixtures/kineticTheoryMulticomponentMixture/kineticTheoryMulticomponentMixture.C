@@ -237,6 +237,11 @@ Foam::kineticTheoryMulticomponentMixture<ThermoType>::Djk
     const scalar Wk = this->specieThermo(k).W();   // [kg/kmol]
     const scalar Wj = this->specieThermo(j).W();   // [kg/kmol]
 
+    // Защита от отрицательных/нулевых значений (резкие градиенты пламени)
+    // могут привести к NaN/Inf в интеграле столкновений.
+    const scalar pSafe = max(p, 1.0);      // [Pa]
+    const scalar TSafe = max(T, 1.0);      // [K]
+
     // Reduced molecular weight, Kee Eq. (12.92)
     const scalar Wkj = Wk*Wj/(Wk + Wj);
 
@@ -310,7 +315,7 @@ Foam::kineticTheoryMulticomponentMixture<ThermoType>::Djk
     }
 
     // Kee Eq. (12.8) - reduced temperature
-    const scalar Tstar = T*kB/epsilonkj;
+    const scalar Tstar = max(TSafe*kB/epsilonkj, 1.0e-3);
 
     // Kee Table 12.1 - Omega^(1,1)* coefficients a_m
     const scalar a[6] = {1.0548, 0.15504, 0.55909, 2.1705, 0.093193, 1.5};
@@ -323,13 +328,17 @@ Foam::kineticTheoryMulticomponentMixture<ThermoType>::Djk
       + (exp(a[4]/Tstar) - exp(-a[5]/Tstar))*sqr(deltastar)
        /(2.0 + 2.5*deltastar);
 
-    omega *= f;
+    omega = max(omega*f, 1.0e-10);
 
     // Kee Eq. (12.113) - binary diffusion coefficient
     return
-        3.0/16.0
-       *sqrt(2.0*NA*pow3(kB*T)/(PI*Wkj/1000.0))
-       /(p*sqr(sigmakj)*omega);
+        max
+        (
+            3.0/16.0
+           *sqrt(2.0*NA*pow3(kB*TSafe)/(PI*Wkj/1000.0))
+           /(pSafe*sqr(sigmakj)*omega),
+            1.0e-30
+        );
 }
 
 

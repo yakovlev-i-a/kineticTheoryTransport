@@ -13,10 +13,12 @@ License
 #include "fluidMulticomponentThermophysicalTransportModels.H"
 
 #include "kineticTheoryFickianFourier.H"
+#include "kineticTheoryHirschfelderCurtiss.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 makeLaminarThermophysicalTransportModel(kineticTheoryFickianFourier);
+makeLaminarThermophysicalTransportModel(kineticTheoryHirschfelderCurtiss);
 
 
 // ************************************************************************* //

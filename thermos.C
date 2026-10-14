@@ -46,7 +46,7 @@ namespace Foam
         standardKineticTransportsensibleEnthalpyjanafThermoperfectGasspecie
     );
 
-    // rho-based: heRhoThermo route
+    // rho-based
     makeFluidMulticomponentThermos
     (
         rhoFluidThermo,
