@@ -14,11 +14,13 @@ License
 
 #include "kineticTheoryFickianFourier.H"
 #include "kineticTheoryHirschfelderCurtiss.H"
+#include "kineticTheoryMaxwellStefanFourier.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 makeLaminarThermophysicalTransportModel(kineticTheoryFickianFourier);
 makeLaminarThermophysicalTransportModel(kineticTheoryHirschfelderCurtiss);
+makeLaminarThermophysicalTransportModel(kineticTheoryMaxwellStefanFourier);
 
 
 // ************************************************************************* //

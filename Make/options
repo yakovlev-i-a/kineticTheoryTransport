@@ -16,7 +16,8 @@ EXE_INC = \
     -Imixtures/kineticTheoryMixture \
     -Imixtures/kineticTheoryMulticomponentMixture \
     -IthermophysicalTransport/kineticTheoryFickianFourier \
-    -IthermophysicalTransport/kineticTheoryHirschfelderCurtiss
+    -IthermophysicalTransport/kineticTheoryHirschfelderCurtiss \
+    -IthermophysicalTransport/kineticTheoryMaxwellStefanFourier
 
 LIB_LIBS = \
     -lfluidMulticomponentThermophysicalTransportModels \
