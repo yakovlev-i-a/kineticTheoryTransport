@@ -1,8 +1,18 @@
 # kineticTheoryTransport
 
-An OpenFOAM-v14 library implementing a **mixture-averaged** transport model
+An OpenFOAM-v14 library implementing **detailed multicomponent transport**
 based on the standard kinetic theory of gases (Chapman–Enskog /
-Lennard–Jones + Stockmayer correction) for reacting multicomponent flows.
+Lennard–Jones + Stockmayer correction) for reacting flows.
+
+The library provides **three species-diffusion closures**, from the cheap
+mixture-averaged approximation up to the strict coupled Stefan–Maxwell
+formulation:
+
+| model | diffusion closure | cost |
+|---|---|---|
+| `kineticTheoryFickianFourier` | mixture-averaged, $\nabla Y_i$ only | low |
+| `kineticTheoryHirschfelderCurtiss` | mixture-averaged + $\frac{Y_i}{W_m}\nabla W_m$ + correction velocity | medium |
+| `kineticTheoryMaxwellStefanFourier` | strict multicomponent (Stefan–Maxwell → generalised Fick) | high |
 
 A port of the `standardKinetic/of-11` fork to OpenFOAM-v14 as a **standalone
 library** (no modification of the native OpenFOAM sources).
@@ -18,6 +28,8 @@ invention:
 - Wilke's rule for the mixture viscosity: Wilke (1950);
 - combination averaging of the thermal conductivity: Mathur, Tondon & Saxena
   (1967);
+- mixture-averaged and Stefan–Maxwell multicomponent diffusion:
+  Taylor & Krishna (1993), *Multicomponent Mass Transfer*;
 - a consolidated presentation of all the equations: **Kee, Coltrin & Glarborg,
   "Chemically Reacting Flow" (2003)**.
 
@@ -43,22 +55,99 @@ From the six CHEMKIN molecular parameters (`geometry`, `welldepth`, `diameter`,
 - binary $`D_{jk}`$ (Chapman–Enskog, collision integrals
   $`\Omega^{(1,1)*}`$, $`\Omega^{(2,2)*}`$ with the Stockmayer polar correction);
 - mixture viscosity $`\mu`$ — Wilke's rule;
-- mixture thermal conductivity $`\kappa`$ — combination averaging (Mathur et al.);
-- mixture-averaged $`D_{k,\mathrm{mix}}`$:
+- mixture thermal conductivity $`\kappa`$ — combination averaging (Mathur et al.).
 
-$$D_{k,\mathrm{mix}} = \frac{1 - Y_k}{\sum_{j \ne k} X_j / D_{jk}}$$
+The three diffusion models then assemble the species mass fluxes $`\mathbf{j}_i`$
+from those binary coefficients.
+
+### Model 1 — `kineticTheoryFickianFourier` (mixture-averaged)
+
+Mixture-averaged mass diffusivity of species $i$:
+
+$$
+D_{i,\mathrm{m}}
+= \frac{1 - Y_i}{W_m \sum_{j \ne i} Y_j/(W_j D_{ij})}
+= \frac{1 - Y_i}{\sum_{j \ne i} X_j/D_{ij}}
+$$
+
+Species mass flux:
+
+$$
+\mathbf{j}_i = -\rho D_{i,\mathrm{m}} \nabla Y_i
+$$
+
+### Model 2 — `kineticTheoryHirschfelderCurtiss`
+
+Hirschfelder–Curtiss approximation of the diffusion velocity, including the
+molecular-weight gradient term:
+
+$$
+\mathbf{V}_i
+= -D_{i,\mathrm{m}} \nabla Y_i
+  - \frac{D_{i,\mathrm{m}} Y_i}{W_m} \nabla W_m
+$$
+
+To enforce global mass conservation ($`\sum_i Y_i \mathbf{V}_i = 0`$) a
+correction velocity is added:
+
+$$
+\mathbf{V}_c
+= \sum_k \left( D_{k,\mathrm{m}} \nabla Y_k
+  + \frac{D_{k,\mathrm{m}} Y_k}{W_m} \nabla W_m \right)
+= -\sum_k \mathbf{V}_k
+$$
+
+Species mass flux:
+
+$$
+\mathbf{j}_i
+= -\rho D_{i,\mathrm{m}} \nabla Y_i
+  - \rho \frac{D_{i,\mathrm{m}} Y_i}{W_m} \nabla W_m
+  + \rho \mathbf{V}_c Y_i
+$$
+
+### Model 3 — `kineticTheoryMaxwellStefanFourier` (strict multicomponent)
+
+The coupled Stefan–Maxwell relation between the mole-fraction gradients and the
+diffusion velocities of all species:
+
+$$
+\nabla X_i = \sum_{j \ne i} \frac{X_i X_j}{D_{ij}} (\mathbf{V}_j - \mathbf{V}_i)
+$$
+
+This is inverted (Taylor–Krishna transformation, an $(N-1)\times(N-1)$
+sub-system excluding the default specie) to the generalised Fick form:
+
+$$
+\mathbf{j}_i
+= -\rho D_{ii}^{\mathrm{Fick}} \nabla Y_i
+  - \sum_{j \ne i} \rho D_{ij}^{\mathrm{Fick}} \nabla Y_j
+$$
+
+where $`D_{ii}^{\mathrm{Fick}}`$ is the implicit (diagonal) part and
+$`D_{ij}^{\mathrm{Fick}}`$ the explicit (off-diagonal) part.
+
+### Energy equation
+
+All three models add the differential-diffusion enthalpy flux
+$`\sum_i \mathbf{j}_i h_i`$ to the energy equation, so the Soret-free
+multi-component enthalpy transport is closed consistently.
 
 ## Layout
 
 ```
 kineticTheoryTransport/
 ├── Make/{files,options}
-├── specie/transport/standardKineticTransport/   # species transport
+├── specie/transport/standardKineticTransport/   # species transport (mu_k, kappa_k, D_kk)
 ├── mixtures/kineticTheoryMixture/               # runtime Djk interface
 ├── mixtures/kineticTheoryMulticomponentMixture/ # mixture (mu/kappa/Djk)
-├── thermophysicalTransport/kineticTheoryFickianFourier/  # transport model
+├── thermophysicalTransport/
+│   ├── kineticTheoryFickianFourier/             # model 1: mixture-averaged
+│   ├── kineticTheoryHirschfelderCurtiss/        # model 2: + grad(W_m) + correction
+│   └── kineticTheoryMaxwellStefanFourier/       # model 3: Stefan-Maxwell
+├── chemistryModel/standardChemistryModels.C     # static standard chemistry instantiation
 ├── thermos.C                    # psi/rho thermo instantiation
-├── thermophysicalTransport.C    # kineticTheoryFickianFourier registration
+├── thermophysicalTransport.C    # diffusion-model registration
 └── validation/                  # test case + validation against Cantera
 ```
 
@@ -70,8 +159,8 @@ cd kineticTheoryTransport
 ./Allwmake
 ```
 
-`Allwmake` builds `libkineticTheoryTransport.so` and installs the user-level
-override of the `chemistryModel` template (see below).
+`Allwmake` builds `libkineticTheoryTransport.so` and installs a user-level
+`chemistryModel` template override (see below).
 
 ## Using in a case
 
@@ -107,28 +196,38 @@ transport
 }
 ```
 
-`constant/thermophysicalTransport`:
+`constant/thermophysicalTransport` — pick one of the three diffusion models:
 
 ```cpp
 laminar
 {
-    model           kineticTheoryFickianFourier;
+    // model           kineticTheoryFickianFourier;          // mixture-averaged
+    // model           kineticTheoryHirschfelderCurtiss;     // + grad(W_m) + correction velocity
+    model           kineticTheoryMaxwellStefanFourier;     // strict Stefan-Maxwell
 }
 ```
 
-## Important detail: chemistryModel via dynamicCode
+## Static chemistryModel instantiation (no `dynamicCode/`)
 
-In OpenFOAM-v14 the `chemistryModel` class (standard stiff-ODE chemistry) is
-templated on the thermoPhysics and compiled **on the fly** (dynamicCode). So
-that this dynamic compilation can find `standardKineticTransport.H`,
-`Allwmake` installs a user-level template override at
+In OpenFOAM-v14 the `chemistryModel` (standard stiff-ODE chemistry) is templated
+on the thermoPhysics and is normally compiled **on the fly** (dynamicCode),
+creating a `dynamicCode/` directory in every case.
+
+This library instead **statically instantiates** the chemistry machinery
+(`standard<standardKinetic<janaf<perfectGas<specie>>, sensibleEnthalpy>>` and
+its reaction / chemistry-reduction tables) in
+`chemistryModel/standardChemistryModels.C`, compiled into
+`libkineticTheoryTransport.so`. Running a case therefore does **not** generate
+`dynamicCode/`.
+
+For compatibility, `Allwmake` still installs a user-level template override at
 
 ```
 ~/.OpenFOAM/14/codeTemplates/dynamicCode/chemistryModel
 ```
 
-which adds `-I<lib>/lnInclude` to `EXE_INC`. On the first run of a case,
-OpenFOAM compiles `standard<standardKinetic<...>>` once and caches it.
+which adds `-I<lib>/lnInclude` to `EXE_INC`. It is a harmless fallback should
+the static instantiation not cover a specific thermo/chemistry combination.
 
 ## Validation
 
@@ -143,3 +242,8 @@ Cantera (gri30, mixture-averaged). Result:
 
 The `validation/` test case is a 2D counterflow flame (GRI 3.0, 53 species,
 325 reactions), run with `foamRun -libs ("libkineticTheoryTransport.so")`.
+
+The three diffusion models are exercised on the DRM-19 (21 species) premixed
+CH₄/air flame. For CH₄/air the mixture-averaged and Stefan–Maxwell closures
+agree to within 1–2% (as expected); the difference becomes significant for
+H₂/air or mixtures with heavy hydrocarbons.
