@@ -181,28 +181,6 @@ laminar
 }
 ```
 
-## Static chemistryModel instantiation (no `dynamicCode/`)
-
-In OpenFOAM-v14 the `chemistryModel` (standard stiff-ODE chemistry) is templated
-on the thermoPhysics and is normally compiled **on the fly** (dynamicCode),
-creating a `dynamicCode/` directory in every case.
-
-This library instead **statically instantiates** the chemistry machinery
-(`standard<standardKinetic<janaf<perfectGas<specie>>, sensibleEnthalpy>>` and
-its reaction / chemistry-reduction tables) in
-`chemistryModel/standardChemistryModels.C`, compiled into
-`libkineticTheoryTransport.so`. Running a case therefore does **not** generate
-`dynamicCode/`.
-
-For compatibility, `Allwmake` still installs a user-level template override at
-
-```
-~/.OpenFOAM/14/codeTemplates/dynamicCode/chemistryModel
-```
-
-which adds `-I<lib>/lnInclude` to `EXE_INC`. It is a harmless fallback should
-the static instantiation not cover a specific thermo/chemistry combination.
-
 ## Validation
 
 `validation/validate_vs_cantera.py` checks the kinetic-theory equations against
@@ -221,3 +199,17 @@ The three diffusion models are exercised on the DRM-19 (21 species) premixed
 CH₄/air flame. For CH₄/air the mixture-averaged and Stefan–Maxwell closures
 agree to within 1–2% (as expected); the difference becomes significant for
 H₂/air or mixtures with heavy hydrocarbons.
+
+## Notes for developers
+
+The `standard` chemistry model is **statically instantiated** in
+`chemistryModel/standardChemistryModels.C` for the
+`standardKinetic<janaf<perfectGas<specie>>, sensibleEnthalpy>` package and
+compiled into `libkineticTheoryTransport.so`, so cases do not create a
+`dynamicCode/` directory.
+
+If you change the thermo/transport package (a different EoS, energy form or
+species transport) and a `dynamicCode/` directory reappears in a case, it means
+the new combination is not covered by `standardChemistryModels.C` — add the
+corresponding explicit instantiation there and rebuild.
+
