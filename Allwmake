@@ -1,64 +1,12 @@
 #!/bin/sh
-# Build libkineticTheoryTransport and install the chemistryModel template
-# override so that dynamicCode can find standardKineticTransport.H.
+# Build libkineticTheoryTransport.
+#
+# The chemistryModel machinery (standard<standardKinetic<...>>) is statically
+# instantiated in chemistryModel/standardChemistryModels.C and compiled into
+# this library, so no dynamicCode template override is needed.
 cd "${0%/*}" || exit 1
-
-LIB_DIR="$(pwd)"
-LN_INCLUDE="$LIB_DIR/lnInclude"
 
 echo "=== Building libkineticTheoryTransport ==="
 wmake libso || { echo "wmake failed"; exit 1; }
 
-echo "=== Installing chemistryModel template override ==="
-OVERRIDE_DIR="$HOME/.OpenFOAM/14/codeTemplates/dynamicCode"
-mkdir -p "$OVERRIDE_DIR"
-
-cat > "$OVERRIDE_DIR/chemistryModel" <<EOF
-/*--------------------------------*- C++ -*----------------------------------*\\
-  =========                 |
-  \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\\\    /   O peration     | Website:  https://openfoam.org
-    \\\\  /    A nd           | Version:  14
-     \\\\/     M anipulation  |
-\\*---------------------------------------------------------------------------*/
-FoamFile
-{
-    format      ascii;
-    class       dictionary;
-    object      chemistryModel;
-}
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-// User override of the native chemistryModel dynamicCode template (installed
-// by kineticTheoryTransport/Allwmake). Adds the lnInclude dir so the on-the-fly
-// compiled chemistryModel (standard<standardKinetic<...>>) finds the header.
-
-type
-(
-    standard
-);
-
-typeRenamed
-(
-    standard Standard
-);
-
-codeOptions
-#{
-EXE_INC = \\
-    -I\$(LIB_SRC)/physicalProperties/lnInclude \\
-    -I\$(LIB_SRC)/thermophysicalModels/specie/lnInclude \\
-    -I\$(LIB_SRC)/thermophysicalModels/basic/lnInclude \\
-    -I\$(LIB_SRC)/thermophysicalModels/multicomponentThermo/lnInclude \\
-    -I\$(LIB_SRC)/thermophysicalModels/chemistryModel/lnInclude \\
-    -I\$(LIB_SRC)/ODE/lnInclude \\
-    -I\$(LIB_SRC)/finiteVolume/lnInclude \\
-    -I\$(LIB_SRC)/meshTools/lnInclude \\
-    -I$LN_INCLUDE
-#};
-
-
-// ************************************************************************* //
-EOF
-
-echo "Installed override: $OVERRIDE_DIR/chemistryModel"
-echo "Done. Library: \$(FOAM_USER_LIBBIN)/libkineticTheoryTransport.so"
+echo "Done."
